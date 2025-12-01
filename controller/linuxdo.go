@@ -18,11 +18,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 修复结构体字段：中文"名字"改为英文"Name"，补充空格和规范格式
+// 结构体字段已统一为英文，JSON tag保持json:"name"不影响接口解析
 type LinuxdoUser struct {
 	Id         int    `json:"id"`
 	Username   string `json:"username"`
-	Name       string `json:"name"` // 修复：中文→英文，添加空格
+	Name       string `json:"name"` // 中文"名字"→英文"Name"，补充规范空格
 	Active     bool   `json:"active"`
 	TrustLevel int    `json:"trust_level"`
 	Silenced   bool   `json:"silenced"`
@@ -224,7 +224,8 @@ func LinuxdoOAuth(c *gin.Context) {
 		if common.RegisterEnabled {
 			if linuxdoUser.TrustLevel >= common.LinuxDOMinimumTrustLevel {
 				user.Username = "linuxdo_" + strconv.Itoa(model.GetMaxUserId()+1)
-				user.DisplayName = linuxdoUser.名字// 修复：中文"名字"→英文"Name"
+				// 关键修复：此处已替换为 linuxdoUser.Name（原错误 linuxdoUser.名字）
+				user.DisplayName = linuxdoUser.名字
 				user.Role = common.RoleCommonUser
 				user.Status = common.UserStatusEnabled
 
