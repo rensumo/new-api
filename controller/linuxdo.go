@@ -18,11 +18,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 结构体字段已统一为英文，JSON tag保持json:"name"不影响接口解析
+// 结构体字段：全大写 NAME（导出字段，支持 JSON 解析），JSON tag 保持 json:"name" 兼容接口
 type LinuxdoUser struct {
 	Id         int    `json:"id"`
 	Username   string `json:"username"`
-	Name       string `json:"name"` // 中文"名字"→英文"Name"，补充规范空格
+	NAME       string `json:"name"` // 全大写字段名，JSON tag 匹配接口返回的 "name"
 	Active     bool   `json:"active"`
 	TrustLevel int    `json:"trust_level"`
 	Silenced   bool   `json:"silenced"`
@@ -84,12 +84,10 @@ func getLinuxdoUserInfoByCode(code string, c *gin.Context) (*LinuxdoUser, error)
 		return nil, errors.New("invalid code")
 	}
 
-	// Get access token using Basic auth
 	tokenEndpoint := common.GetEnvOrDefaultString("LINUX_DO_TOKEN_ENDPOINT", "https://connect.linuxdo.org/oauth2/token")
 	credentials := common.LinuxDOClientId + ":" + common.LinuxDOClientSecret
 	basicAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(credentials))
 
-	// Get redirect URI from request
 	scheme := "http"
 	if c.Request.TLS != nil {
 		scheme = "https"
@@ -129,7 +127,6 @@ func getLinuxdoUserInfoByCode(code string, c *gin.Context) (*LinuxdoUser, error)
 		return nil, fmt.Errorf("failed to get access token: %s", tokenRes.Message)
 	}
 
-	// Get user info
 	userEndpoint := common.GetEnvOrDefaultString("LINUX_DO_USER_ENDPOINT", "https://connect.linuxdo.org/api/user")
 	req, err = http.NewRequest("GET", userEndpoint, nil)
 	if err != nil {
@@ -203,7 +200,6 @@ func LinuxdoOAuth(c *gin.Context) {
 		LinuxDOId: strconv.Itoa(linuxdoUser.Id),
 	}
 
-	// Check if user exists
 	if model.IsLinuxDOIdAlreadyTaken(user.LinuxDOId) {
 		err := user.FillUserByLinuxDOId()
 		if err != nil {
@@ -224,8 +220,8 @@ func LinuxdoOAuth(c *gin.Context) {
 		if common.RegisterEnabled {
 			if linuxdoUser.TrustLevel >= common.LinuxDOMinimumTrustLevel {
 				user.Username = "linuxdo_" + strconv.Itoa(model.GetMaxUserId()+1)
-				// 关键修复：此处已替换为 linuxdoUser.Name（原错误 linuxdoUser.名字）
-				user.DisplayName = linuxdoUser.名字
+				// 字段引用同步全大写：linuxdoUser.NAME（与结构体字段一致）
+				user.DisplayName = linuxdoUser.NAME
 				user.Role = common.RoleCommonUser
 				user.Status = common.UserStatusEnabled
 
